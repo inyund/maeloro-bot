@@ -1,0 +1,13 @@
+# MaeloRO (maeloro.com) - browser RO via ROBrowser websocket proxy.
+# Connection: shim/ws2tcp.js bridges TCP -> wss://entrada17.maeloro.com/127.0.0.1:50100
+# Protocol verified live 2026-08-25: login 0064 accepted, reply 0AC4 (account_server_info).
+[MaeloRO]
+ip 127.0.0.1
+port 50100
+master_version 45
+version 45
+serverType kRO_RagexeRE_Maelo
+serverEncoding Western
+charBlockSize 147
+masterLogin_packet 0064
+addTableFolders kRO

@@ -1,0 +1,23 @@
+######## MaeloRO bot — inyund ########
+
+master MaeloRO
+server 0
+username ${KORE_USERNAME}
+password ${KORE_PASSWORD}
+char 0
+
+locale en_US
+
+# Stay idle: no attack, no pickup, no route
+attackAuto 0
+attackAuto_inLockOnly 0
+route_autoReconnect 1
+itemsTakeAuto 0
+itemsGatherAuto 0
+sitAuto_idle 0
+lockMap none
+saveMap none
+
+reconnect 5
+dcOnDeath -1
+dcOnDualLogin 0

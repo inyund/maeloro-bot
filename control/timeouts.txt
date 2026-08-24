@@ -1,0 +1,4 @@
+# MaeloRO: give the server time to drop our previous session before relogin
+reconnect 45
+charLoginRetryTime 30
+loginOnCharLogin 1
