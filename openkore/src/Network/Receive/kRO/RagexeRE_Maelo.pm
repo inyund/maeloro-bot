@@ -9,7 +9,7 @@ sub new {
 	my ($class) = @_;
 	my $self = $class->SUPER::new(@_);
 	my %packets = (
-		'0AC4' => ['account_server_info', 'v a4 a4 a4 C x30 Z17 a*', [qw(len sessionID sessionID2 accountID accountSex webAuthToken serverInfo)]],
+		'0AC4' => ['account_server_info', 'v a4 a4 a4 C x30 Z17 a*', [qw(len sessionID accountID sessionID2 accountSex webAuthToken serverInfo)]],
 		'09A0' => ['sync_received_characters', 'V', [qw(sync_Count)]],
 		'020D' => ['sync_received_characters', 'v', []], # MaeloRO uses 0x020D (len 4) as charlist notify
 	);
