@@ -12,6 +12,7 @@ sub new {
 		'0AC4' => ['account_server_info', 'v a4 a4 a4 x30 C Z17 a*', [qw(len sessionID accountID sessionID2 accountSex webAuthToken serverInfo)]],
 		'09A0' => ['sync_received_characters', 'V', [qw(sync_Count)]],
 		'020D' => ['sync_received_characters', 'v', []], # MaeloRO uses 0x020D (len 4) as charlist notify
+		'006B' => ['received_characters_info', 'v C3 x20 a*', [qw(len total_slot premium_start_slot premium_end_slot charInfo)]],
 	);
 	$self->{packet_list}{$_} = $packets{$_} for keys %packets;
 	return $self;
