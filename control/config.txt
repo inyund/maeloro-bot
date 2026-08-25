@@ -22,4 +22,4 @@ reconnect 5
 dcOnDeath -1
 dcOnDualLogin 0
 
-debug 2
+debug 0

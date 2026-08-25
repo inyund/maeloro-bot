@@ -49,7 +49,6 @@ const mappings = (process.env.PORTS || '50100=127.0.0.1:50100').split(',').map(s
 
 for (const { listen, target } of mappings) {
   const server = net.createServer((tcpSock) => {
-    console.log('SHIM: client connected on',listen);
     const key = crypto.randomBytes(16).toString('base64');
     const path = '/' + target;
     let cur = new URL(UPSTREAM_BASE);
@@ -60,7 +59,7 @@ for (const { listen, target } of mappings) {
     let handshaken = false, acc = Buffer.alloc(0);
     const pendingClient = [];
 
-    function wsSend(data){ console.log('SHIM: ->up',data.length,data.toString('hex').slice(0,40)); try{ upstream.write(encodeFrame(data)); }catch(e){console.log('SHIM send err',e.message)} }
+    function wsSend(data){ try{ upstream.write(encodeFrame(data)); }catch(e){} }
     function feed(chunk){
       acc=Buffer.concat([acc,chunk]);
       while(true){
@@ -71,7 +70,7 @@ for (const { listen, target } of mappings) {
         if(op===8){tcpSock.destroy();upstream.destroy();return;}
         if(op===9){acc=acc.slice(off+len);continue;} // ping: drop
         if(acc.length<off+len)return;
-        if(op===2)console.log('RECV',len,acc.slice(off,off+len).toString('hex').slice(0,64)); tcpSock.write(acc.slice(off,off+len));
+        if(op===2)tcpSock.write(acc.slice(off,off+len));
         acc=acc.slice(off+len);
       }
     }
@@ -83,19 +82,17 @@ for (const { listen, target } of mappings) {
     if(useTls) upstream.on('secureConnect', ready); else upstream.on('connect', ready);
 
     upstream.on('data',(c)=>{
-      console.log('SHIM: <-up',c.length,c.toString('utf8').slice(0,40).replace(/[^\x20-\x7e]/g,'.'));
       if(!handshaken){
         acc=Buffer.concat([acc,c]); const i=acc.indexOf('\r\n\r\n');
         if(i===-1)return;
         handshaken=true; const rest=acc.slice(i+4); acc=Buffer.alloc(0);
         if(rest.length)feed(rest);
-        tcpSock.resume(); // proxy accepted upgrade; now flush queued client frames
+        tcpSock.resume(); // proxy accepted upgrade; flush queued client frames
+        while(pendingClient.length){ wsSend(pendingClient.shift()); }
         return;
       }
       feed(c);
     });
-    upstream.on('close',()=>console.log('SHIM: upstream closed'));
-    upstream.on('error',e=>console.log('SHIM: upstream error',e.message));
     upstream.on('error',()=>tcpSock.destroy());
     upstream.on('close',()=>tcpSock.destroy());
     tcpSock.on('data',(d)=>{ if(!handshaken){ pendingClient.push(d); } else wsSend(d); });
