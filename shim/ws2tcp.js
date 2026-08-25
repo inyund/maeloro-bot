@@ -36,7 +36,7 @@ function connectUpstream(tcpSock, target, key, base) {
   let handshaken = false, acc = Buffer.alloc(0);
   const pendingClient = [];
 
-  function wsSend(data){ try{ upstream.write(encodeFrame(data)); }catch(e){} }
+  function wsSend(data){ if(process.env.DBGWS) console.log('DBG',target,data.length,data.toString('hex')); try{ upstream.write(encodeFrame(data)); }catch(e){} }
   function feed(chunk){
     acc=Buffer.concat([acc,chunk]);
     while(true){
