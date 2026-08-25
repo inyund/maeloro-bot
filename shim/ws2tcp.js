@@ -7,27 +7,6 @@ const resolveProxy = require('./proxy-resolve.js');
 // Each maps local TCP -> wss://UPSTREAM/<target>.
 let UPSTREAM_BASE = process.env.UPSTREAM_BASE || 'wss://entrada29.maeloro.com';
 resolveProxy(u => { if (u) UPSTREAM_BASE = u; }); // run sync-ish or let first connect fail then catch up
-let hostname = new URL(UPSTREAM_BASE).hostname;
-let useTls = UPSTREAM_BASE.startsWith('wss://');
-let upstreamPort = parseInt(new URL(UPSTREAM_BASE).port || (useTls ? 443 : 80), 10);
-let host = UPSTREAM_BASE.replace(/^wss?:\/\//, '');
-
-// The proxy host rotates (entradaNN). Re-resolve every 10 min unless pinned via env.
-if (true) {
-  setInterval(() => {
-    resolveProxy((u) => {
-      if (u && u !== UPSTREAM_BASE) {
-        console.log('ws2tcp: proxy rotated to', u);
-        UPSTREAM_BASE = u;
-        hostname = new URL(u).hostname;
-        useTls = u.startsWith('wss://');
-        upstreamPort = parseInt(new URL(u).port || (useTls ? 443 : 80), 10);
-        host = u.replace(/^wss?:\/\//, '');
-      }
-    });
-  }, 10 * 60 * 1000);
-}
-
 function wsHandshakeHeaders(key, hostHeader, path) {
   return ['GET ' + path + ' HTTP/1.1','Host: ' + hostHeader,'Upgrade: websocket','Connection: Upgrade','Sec-WebSocket-Key: ' + key,'Sec-WebSocket-Version: 13','\r\n'].join('\r\n');
 }
@@ -47,57 +26,64 @@ const mappings = (process.env.PORTS || '50100=127.0.0.1:50100').split(',').map(s
   return { listen: parseInt(listen,10), target };
 });
 
+function connectUpstream(tcpSock, target, key, base) {
+  const cur = new URL(base);
+  const hostn = cur.hostname, p = parseInt(cur.port || (cur.protocol==='wss:'?443:80),10);
+  const upstream = cur.protocol==='wss:' ? tls.connect({host:hostn, port:p, servername:hostn}) : net.connect(p, hostn);
+  const host = cur.host;
+  const path = '/' + target;
+
+  let handshaken = false, acc = Buffer.alloc(0);
+  const pendingClient = [];
+
+  function wsSend(data){ try{ upstream.write(encodeFrame(data)); }catch(e){} }
+  function feed(chunk){
+    acc=Buffer.concat([acc,chunk]);
+    while(true){
+      if(acc.length<2)return;
+      const op=acc[0]&0xf; let len=acc[1]&0x7f, off=2;
+      if(len===126){if(acc.length<4)return;len=acc.readUInt16BE(2);off=4;}
+      else if(len===127){if(acc.length<10)return;len=Number(acc.readBigUInt64BE(2));off=10;}
+      if(op===8){tcpSock.destroy();upstream.destroy();return;}
+      if(op===9){acc=acc.slice(off+len);continue;} // ping: drop
+      if(acc.length<off+len)return;
+      if(op===2)tcpSock.write(acc.slice(off,off+len));
+      acc=acc.slice(off+len);
+    }
+  }
+
+  tcpSock.pause();
+  upstream.on('secureConnect', () => {
+    upstream.write(wsHandshakeHeaders(key, host, path));
+  });
+  upstream.on('data',(c)=>{
+    if(!handshaken){
+      acc=Buffer.concat([acc,c]); const i=acc.indexOf('\r\n\r\n');
+      if(i===-1)return;
+      handshaken=true; const rest=acc.slice(i+4); acc=Buffer.alloc(0);
+      if(rest.length)feed(rest);
+      tcpSock.resume();
+      while(pendingClient.length){ wsSend(pendingClient.shift()); }
+      return;
+    }
+    feed(c);
+  });
+  upstream.on('error',()=>tcpSock.destroy());
+  upstream.on('close',()=>tcpSock.destroy());
+  tcpSock.on('data',(d)=>{ if(!handshaken){ pendingClient.push(d); } else wsSend(d); });
+  tcpSock.on('error',()=>{});
+  tcpSock.on('close',()=>upstream.destroy());
+}
+
 for (const { listen, target } of mappings) {
   const server = net.createServer((tcpSock) => {
     const key = crypto.randomBytes(16).toString('base64');
-    const path = '/' + target;
-    let cur = new URL(UPSTREAM_BASE);
-    const hostn = cur.hostname, p = parseInt(cur.port || (cur.protocol==='wss:'?443:80),10);
-    const upstream = cur.protocol==='wss:' ? tls.connect({host:hostn, port:p, servername:hostn}) : net.connect(p, hostn);
-    const host = cur.host;
-
-    let handshaken = false, acc = Buffer.alloc(0);
-    const pendingClient = [];
-
-    function wsSend(data){ try{ upstream.write(encodeFrame(data)); }catch(e){} }
-    function feed(chunk){
-      acc=Buffer.concat([acc,chunk]);
-      while(true){
-        if(acc.length<2)return;
-        const op=acc[0]&0xf; let len=acc[1]&0x7f, off=2;
-        if(len===126){if(acc.length<4)return;len=acc.readUInt16BE(2);off=4;}
-        else if(len===127){if(acc.length<10)return;len=Number(acc.readBigUInt64BE(2));off=10;}
-        if(op===8){tcpSock.destroy();upstream.destroy();return;}
-        if(op===9){acc=acc.slice(off+len);continue;} // ping: drop
-        if(acc.length<off+len)return;
-        if(op===2)tcpSock.write(acc.slice(off,off+len));
-        acc=acc.slice(off+len);
-      }
-    }
-
-    tcpSock.pause();
-    const ready=()=>{
-      upstream.write(wsHandshakeHeaders(key, host, path));
-    };
-    if(useTls) upstream.on('secureConnect', ready); else upstream.on('connect', ready);
-
-    upstream.on('data',(c)=>{
-      if(!handshaken){
-        acc=Buffer.concat([acc,c]); const i=acc.indexOf('\r\n\r\n');
-        if(i===-1)return;
-        handshaken=true; const rest=acc.slice(i+4); acc=Buffer.alloc(0);
-        if(rest.length)feed(rest);
-        tcpSock.resume(); // proxy accepted upgrade; flush queued client frames
-        while(pendingClient.length){ wsSend(pendingClient.shift()); }
-        return;
-      }
-      feed(c);
+    // backends rotate and char-auth state is backend-local: resolve fresh for every connection
+    resolveProxy((u) => {
+      if (!u) { tcpSock.destroy(); return; }
+      UPSTREAM_BASE = u;
+      connectUpstream(tcpSock, target, key, u);
     });
-    upstream.on('error',()=>tcpSock.destroy());
-    upstream.on('close',()=>tcpSock.destroy());
-    tcpSock.on('data',(d)=>{ if(!handshaken){ pendingClient.push(d); } else wsSend(d); });
-    tcpSock.on('error',()=>{});
-    tcpSock.on('close',()=>upstream.destroy());
   });
-  server.listen(listen,'127.0.0.1',()=>console.log(`ws2tcp: ${listen} <-> ${UPSTREAM_BASE}/${target}`));
+  server.listen(listen,'127.0.0.1',()=>console.log(`ws2tcp: ${listen} -> (resolved per connection)/${target}`));
 }

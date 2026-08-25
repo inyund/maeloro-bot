@@ -1,17 +1,21 @@
 // Fetch the current socketProxy host from MaeloRO's loader (it rotates: entradaNN).
+// Cached for 60s; callback fires with (err, url).
 const http = require('https');
-module.exports = function resolveProxy(cb) {
+
+let cache = { url: null, at: 0 };
+const inflight = [];
+
+function fetchNow(cb) {
   const get = (path, ok) => {
     http.get({host:'maeloro.com', path, headers:{'User-Agent':'Mozilla/5.0'}}, (res) => {
       let b=''; res.on('data',c=>b+=c); res.on('end',()=>ok(b));
     }).on('error', ()=>ok(null));
   };
   get('/play.php', (html) => {
-    if (!html) return cb(process.env.UPSTREAM_BASE || 'wss://entrada29.maeloro.com');
+    if (!html) return cb(null);
     const m = html.match(/\}\)\('([A-Za-z0-9+/=]+)'\)/);
-    if (!m) return cb(process.env.UPSTREAM_BASE || 'wss://entrada29.maeloro.com');
+    if (!m) return cb(null);
     let js; try { js = Buffer.from(m[1], 'base64').toString(); } catch { return cb(null); }
-    // js picks server then loads loadConfigMaeloRO.php?server=<name>
     const srv = (js.match(/REMOTE_SERVERS\s*=\s*\[(.*?)\]/)||[])[1];
     const first = srv ? srv.split(',')[0].replace(/[^a-z0-9]/g,'') : 'juego2';
     get('/loadConfigMaeloRO.php?server='+first, (cfgjs) => {
@@ -27,5 +31,16 @@ module.exports = function resolveProxy(cb) {
         cb(u ? u[1] : null);
       } catch { cb(null); }
     });
+  });
+}
+
+module.exports = function resolveProxy(cb) {
+  if (cache.url && Date.now() - cache.at < 60000) { cb(cache.url); return; }
+  inflight.push(cb);
+  if (inflight.length > 1) return;
+  fetchNow((u) => {
+    if (u) { cache = { url: u, at: Date.now() }; }
+    let cbs = inflight.splice(0);
+    for (const c of cbs) c(u || cache.url || process.env.UPSTREAM_BASE || 'wss://entrada29.maeloro.com');
   });
 };
