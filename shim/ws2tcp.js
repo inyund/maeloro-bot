@@ -49,6 +49,7 @@ const mappings = (process.env.PORTS || '50100=127.0.0.1:50100').split(',').map(s
 
 for (const { listen, target } of mappings) {
   const server = net.createServer((tcpSock) => {
+    console.log('SHIM: client connected on',listen);
     const key = crypto.randomBytes(16).toString('base64');
     const path = '/' + target;
     let cur = new URL(UPSTREAM_BASE);
@@ -57,8 +58,9 @@ for (const { listen, target } of mappings) {
     const host = cur.host;
 
     let handshaken = false, acc = Buffer.alloc(0);
+    const pendingClient = [];
 
-    function wsSend(data){ try{ upstream.write(encodeFrame(data)); }catch(e){} }
+    function wsSend(data){ console.log('SHIM: ->up',data.length,data.toString('hex').slice(0,40)); try{ upstream.write(encodeFrame(data)); }catch(e){console.log('SHIM send err',e.message)} }
     function feed(chunk){
       acc=Buffer.concat([acc,chunk]);
       while(true){
@@ -77,23 +79,26 @@ for (const { listen, target } of mappings) {
     tcpSock.pause();
     const ready=()=>{
       upstream.write(wsHandshakeHeaders(key, host, path));
-      tcpSock.resume();
     };
     if(useTls) upstream.on('secureConnect', ready); else upstream.on('connect', ready);
 
     upstream.on('data',(c)=>{
+      console.log('SHIM: <-up',c.length,c.toString('utf8').slice(0,40).replace(/[^\x20-\x7e]/g,'.'));
       if(!handshaken){
         acc=Buffer.concat([acc,c]); const i=acc.indexOf('\r\n\r\n');
         if(i===-1)return;
         handshaken=true; const rest=acc.slice(i+4); acc=Buffer.alloc(0);
         if(rest.length)feed(rest);
+        tcpSock.resume(); // proxy accepted upgrade; now flush queued client frames
         return;
       }
       feed(c);
     });
+    upstream.on('close',()=>console.log('SHIM: upstream closed'));
+    upstream.on('error',e=>console.log('SHIM: upstream error',e.message));
     upstream.on('error',()=>tcpSock.destroy());
     upstream.on('close',()=>tcpSock.destroy());
-    tcpSock.on('data',wsSend);
+    tcpSock.on('data',(d)=>{ if(!handshaken){ pendingClient.push(d); } else wsSend(d); });
     tcpSock.on('error',()=>{});
     tcpSock.on('close',()=>upstream.destroy());
   });
