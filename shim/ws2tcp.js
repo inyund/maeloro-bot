@@ -51,7 +51,10 @@ for (const { listen, target } of mappings) {
   const server = net.createServer((tcpSock) => {
     const key = crypto.randomBytes(16).toString('base64');
     const path = '/' + target;
-    const upstream = useTls ? tls.connect({host:hostname, port:upstreamPort, servername:hostname}) : net.connect(upstreamPort, hostname);
+    let cur = new URL(UPSTREAM_BASE);
+    const hostn = cur.hostname, p = parseInt(cur.port || (cur.protocol==='wss:'?443:80),10);
+    const upstream = cur.protocol==='wss:' ? tls.connect({host:hostn, port:p, servername:hostn}) : net.connect(p, hostn);
+    const host = cur.host;
 
     let handshaken = false, acc = Buffer.alloc(0);
 
