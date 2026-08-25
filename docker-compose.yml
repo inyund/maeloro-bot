@@ -5,5 +5,5 @@ services:
     restart: unless-stopped
     environment:
       - PORTS=50100=127.0.0.1:50100,50200=127.0.0.1:50200,5121=127.0.0.1:5121
-      - UPSTREAM_BASE=wss://entrada17.maeloro.com
+      - UPSTREAM_BASE=wss://entrada29.maeloro.com
       - TARGET=127.0.0.1:50100

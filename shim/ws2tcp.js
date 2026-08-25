@@ -1,14 +1,31 @@
 const net = require('net');
 const tls = require('tls');
 const crypto = require('crypto');
+const resolveProxy = require('./proxy-resolve.js');
 
 // One listener per RO hop. PORTS env: "50100=127.0.0.1:50100,50200=127.0.0.1:50200,..."
 // Each maps local TCP -> wss://UPSTREAM/<target>.
-const UPSTREAM_BASE = process.env.UPSTREAM_BASE || 'wss://entrada17.maeloro.com';
-const hostname = new URL(UPSTREAM_BASE).hostname;
-const useTls = UPSTREAM_BASE.startsWith('wss://');
-const upstreamPort = parseInt(new URL(UPSTREAM_BASE).port || (useTls ? 443 : 80), 10);
-const host = UPSTREAM_BASE.replace(/^wss?:\/\//, '');
+let UPSTREAM_BASE = process.env.UPSTREAM_BASE || 'wss://entrada29.maeloro.com';
+let hostname = new URL(UPSTREAM_BASE).hostname;
+let useTls = UPSTREAM_BASE.startsWith('wss://');
+let upstreamPort = parseInt(new URL(UPSTREAM_BASE).port || (useTls ? 443 : 80), 10);
+let host = UPSTREAM_BASE.replace(/^wss?:\/\//, '');
+
+// The proxy host rotates (entradaNN). Re-resolve every 10 min unless pinned via env.
+if (!process.env.UPSTREAM_BASE) {
+  setInterval(() => {
+    resolveProxy((u) => {
+      if (u && u !== UPSTREAM_BASE) {
+        console.log('ws2tcp: proxy rotated to', u);
+        UPSTREAM_BASE = u;
+        hostname = new URL(u).hostname;
+        useTls = u.startsWith('wss://');
+        upstreamPort = parseInt(new URL(u).port || (useTls ? 443 : 80), 10);
+        host = u.replace(/^wss?:\/\//, '');
+      }
+    });
+  }, 10 * 60 * 1000);
+}
 
 function wsHandshakeHeaders(key, hostHeader, path) {
   return ['GET ' + path + ' HTTP/1.1','Host: ' + hostHeader,'Upgrade: websocket','Connection: Upgrade','Sec-WebSocket-Key: ' + key,'Sec-WebSocket-Version: 13','\r\n'].join('\r\n');

@@ -9,12 +9,12 @@ MaeloRO's ROBrowser client does not expose a plain TCP game port. It tunnels
 RO packets over WebSocket:
 
 ```
-browser --wss--> wss://entrada17.maeloro.com/<game-host>:<game-port> --> RO servers
+browser --wss--> wss://entrada29.maeloro.com/<game-host>:<game-port> --> RO servers
 ```
 
 `shim/ws2tcp.js` bridges that: OpenKore dials `127.0.0.1:50100` (raw TCP, as it
 always does) and the shim relays every byte over
-`wss://entrada17.maeloro.com/127.0.0.1:50100`, which is the same tunnel the
+`wss://entrada29.maeloro.com/127.0.0.1:50100`, which is the same tunnel the
 real client uses (decoded from `loadConfigMaeloRO.php`: packetver 20231221,
 Renewal, langtype 20, version 55).
 
