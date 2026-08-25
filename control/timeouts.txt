@@ -1,5 +1,11 @@
 # MaeloRO: give the server time to drop our previous session before relogin
-master 30
+# Wait for each login-stage reply before treating the connection as stalled.
+# These MUST exist: timeOut() treats a missing key as instantly expired.
+master 12
+gamelogin 12
+charlogin 12
+maplogin 12
+play 40
 reconnect 45
 charLoginRetryTime 30
 loginOnCharLogin 1

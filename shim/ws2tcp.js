@@ -57,7 +57,7 @@ function connectUpstream(tcpSock, target, key, base) {
   upstream.on('secureConnect', () => {
     upstream.write(wsHandshakeHeaders(key, host, path));
   });
-  upstream.on('data',(c)=>{
+  upstream.on('data',(c)=>{ if(target.endsWith(':50200')) console.log('ws2tcp: char up', c.length);
     if(!handshaken){
       acc=Buffer.concat([acc,c]); const i=acc.indexOf('\r\n\r\n');
       if(i===-1)return;
@@ -73,7 +73,7 @@ function connectUpstream(tcpSock, target, key, base) {
   upstream.on('close',()=>tcpSock.destroy());
   tcpSock.on('data',(d)=>{ if(!handshaken){ pendingClient.push(d); } else wsSend(d); });
   tcpSock.on('error',()=>{});
-  tcpSock.on('close',()=>upstream.destroy());
+  tcpSock.on('close',()=>{ if(target.endsWith(':50200')) console.log('ws2tcp: char client closed'); upstream.destroy(); });
 }
 
 for (const { listen, target } of mappings) {
