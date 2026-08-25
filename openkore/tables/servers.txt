@@ -10,4 +10,5 @@ serverType kRO_RagexeRE_Maelo
 serverEncoding Western
 charBlockSize 147
 masterLogin_packet 0064
+keepLoginConn 1
 addTableFolders kRO

@@ -1218,7 +1218,7 @@ sub account_server_info {
 
 	if ($net->version != 1) {
 		message T("Closing connection to Account Server\n"), 'connection';
-		$net->serverDisconnect();
+		$net->serverDisconnect() unless ($masterServer->{keepLoginConn});
 		if (!$masterServer->{charServer_ip} && $config{server} eq "") {
 			my @serverList;
 			foreach my $server (@servers) {
