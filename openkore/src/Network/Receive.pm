@@ -865,7 +865,7 @@ sub received_characters {
 
 	return unless exists $args->{charInfo};
 
-	debug "received_characters: charInfo len=".length($args->{charInfo})." blockSize=".$masterServer->{charBlockSize}."\n", "connection";
+	message "received_characters: charInfo len=".length($args->{charInfo})." blockSize=".$masterServer->{charBlockSize}."\n", "connection";
 	for (my $i = 0; $i < length($args->{charInfo}); $i += $masterServer->{charBlockSize}) {
 		my $temporary_character;
 		@{$temporary_character}{@{$char_info->{keys}}} = unpack($char_info->{types}, substr($args->{charInfo}, $i, $masterServer->{charBlockSize}));
