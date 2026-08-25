@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       perl libreadline8 libncurses6 libcurl4 \
       nodejs npm \
       ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=shim /shim/ws2tcp.js /bot/ws2tcp.js
+COPY --from=shim /shim/ /bot/shim/
 COPY --from=builder /bot/openkore/ /bot/openkore/
 COPY control/ /bot/control/
 COPY entrypoint.sh /bot/entrypoint.sh
