@@ -4,8 +4,8 @@
 [MaeloRO]
 ip 127.0.0.1
 port 50100
-master_version 45
-version 45
+master_version 55
+version 55
 serverType kRO_RagexeRE_Maelo
 serverEncoding Western
 charBlockSize 147
