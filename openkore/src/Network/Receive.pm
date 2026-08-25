@@ -1290,6 +1290,7 @@ sub map_loaded {
 	}
 
 	message(T("You are now in the game\n"), "connection");
+	Commands::run("i");
 	Plugins::callHook('in_game');
 	$timeout{'ai'}{'time'} = time;
 	our $quest_generation++;
