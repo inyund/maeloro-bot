@@ -6,13 +6,14 @@ const resolveProxy = require('./proxy-resolve.js');
 // One listener per RO hop. PORTS env: "50100=127.0.0.1:50100,50200=127.0.0.1:50200,..."
 // Each maps local TCP -> wss://UPSTREAM/<target>.
 let UPSTREAM_BASE = process.env.UPSTREAM_BASE || 'wss://entrada29.maeloro.com';
+resolveProxy(u => { if (u) UPSTREAM_BASE = u; }); // run sync-ish or let first connect fail then catch up
 let hostname = new URL(UPSTREAM_BASE).hostname;
 let useTls = UPSTREAM_BASE.startsWith('wss://');
 let upstreamPort = parseInt(new URL(UPSTREAM_BASE).port || (useTls ? 443 : 80), 10);
 let host = UPSTREAM_BASE.replace(/^wss?:\/\//, '');
 
 // The proxy host rotates (entradaNN). Re-resolve every 10 min unless pinned via env.
-if (!process.env.UPSTREAM_BASE) {
+if (true) {
   setInterval(() => {
     resolveProxy((u) => {
       if (u && u !== UPSTREAM_BASE) {
@@ -65,7 +66,7 @@ for (const { listen, target } of mappings) {
         if(op===8){tcpSock.destroy();upstream.destroy();return;}
         if(op===9){acc=acc.slice(off+len);continue;} // ping: drop
         if(acc.length<off+len)return;
-        if(op===2)tcpSock.write(acc.slice(off,off+len));
+        if(op===2)console.log('RECV',len,acc.slice(off,off+len).toString('hex').slice(0,64)); tcpSock.write(acc.slice(off,off+len));
         acc=acc.slice(off+len);
       }
     }

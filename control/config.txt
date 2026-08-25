@@ -21,3 +21,5 @@ saveMap none
 reconnect 5
 dcOnDeath -1
 dcOnDualLogin 0
+
+debug 2
