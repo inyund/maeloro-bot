@@ -8,6 +8,6 @@ master_version 55
 version 55
 serverType kRO_RagexeRE_Maelo
 serverEncoding Western
-charBlockSize 147
+charBlockSize 175
 masterLogin_packet 0064
 addTableFolders kRO
