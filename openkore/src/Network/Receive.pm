@@ -680,6 +680,16 @@ sub changeToInGameState {
 		if ($accountID && UNIVERSAL::isa($char, 'Actor::You')) {
 			if ($net->getState() != Network::IN_GAME) {
 				$net->setState(Network::IN_GAME);
+				if ($char->inventory && $char->inventory->size() > 0) {
+					my @inv = $char->inventory->getAll();
+					message "INVENTORY_DUMP start\n", "info";
+					for my $it (@inv) {
+						message sprintf("INV: %s x%d invIndex=%d\n", $it->{name} || "?", $it->{amount} || 1, $it->{invIndex} || 0), "info";
+					}
+					message "INVENTORY_DUMP end\n", "info";
+				} else {
+					message "INVENTORY_DUMP empty\n", "info";
+				}
 			}
 			return 1;
 		} else {
