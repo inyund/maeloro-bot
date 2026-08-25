@@ -1053,7 +1053,7 @@ sub _items_list {
 		my $index = ($local_item->{binID} >= 0) ? $local_item->{binID} : $local_item->{ID};
 		debug "$args->{debug_str}: $local_item->{name} ($index) x $local_item->{amount} - $itemTypes_lut{$local_item->{type}}\n", 'parseMsg';
 		if ($args->{debug_str} =~ /Item List|Inventory/i) {
-			message sprintf("INVENTORY: %s x%d%s\n", $local_item->{name}, $local_item->{amount} || 1,
+			message sprintf("INV: %s x%d%s\n", $local_item->{name}, $local_item->{amount} || 1,
 				($local_item->{equipped} ? " [equipped]" : "")), "info";
 		}
 		Plugins::callHook($args->{hook}, {
