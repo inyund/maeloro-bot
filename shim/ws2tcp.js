@@ -27,6 +27,7 @@ const mappings = (process.env.PORTS || '50100=127.0.0.1:50100').split(',').map(s
 });
 
 function connectUpstream(tcpSock, target, key, base) {
+  console.log('ws2tcp: conn', target);
   const cur = new URL(base);
   const hostn = cur.hostname, p = parseInt(cur.port || (cur.protocol==='wss:'?443:80),10);
   const upstream = cur.protocol==='wss:' ? tls.connect({host:hostn, port:p, servername:hostn}) : net.connect(p, hostn);
@@ -47,7 +48,7 @@ function connectUpstream(tcpSock, target, key, base) {
       if(op===8){tcpSock.destroy();upstream.destroy();return;}
       if(op===9){acc=acc.slice(off+len);continue;} // ping: drop
       if(acc.length<off+len)return;
-      if(op===2)tcpSock.write(acc.slice(off,off+len));
+      if(op===2){ if(target.endsWith(':50200')) console.log('ws2tcp: char <-', len, acc.slice(off,off+len).toString('hex').slice(0,32)); tcpSock.write(acc.slice(off,off+len)); }
       acc=acc.slice(off+len);
     }
   }
