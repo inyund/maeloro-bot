@@ -19,8 +19,9 @@ sub on_ai {
         $dumped = 1;
         message "==================== BACK'S INVENTORY ====================\n", "system";
         for my $it ($char->inventory->getItems()) {
+            next unless $it;
             message sprintf("INV-ITEM: %s x%d (equipped: %s)\n", 
-                $it->{name} || "Unknown", 
+                $it->name() || $it->{name} || "Unknown", 
                 $it->{amount} || 1, 
                 $it->{equipped} ? "yes" : "no"), "system";
         }
