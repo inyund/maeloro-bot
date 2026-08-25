@@ -1,5 +1,5 @@
 FROM node:24-bookworm-slim AS shim
-COPY shim/ws2tcp.js /shim/ws2tcp.js
+COPY shim/ /shim/
 
 FROM debian:bookworm-slim AS builder
 RUN apt-get update && apt-get install -y --no-install-recommends \
