@@ -225,7 +225,9 @@ sub parse {
 	my ($self, $msg, $handleContainer, @handleArguments) = @_;
 
 	$lastSwitch = Network::MessageTokenizer::getMessageID($msg);
+	print "[dbg] parse switch=".sprintf("%04X",$lastSwitch)." len=".length($msg)."\n";
 	my $handler = $self->{packet_list}{$lastSwitch};
+	unless ($handler) { print "[dbg] NO HANDLER for $lastSwitch\n"; }
 
 	unless ($handler) {
 		unless (existsInList($config{debugPacket_exclude}, $lastSwitch)) {
